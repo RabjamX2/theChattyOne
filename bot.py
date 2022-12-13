@@ -38,7 +38,7 @@ async def on_message(message):
     if flagged["flagged"]:
         for flag in flagged["categories"]:
             if flagged["categories"][flag]:
-                await message.channel.send(f"Can't reply since you have been flagged for '''{flag}'''")
+                await message.channel.send(f"Yo {message.author}, stop it with the {flag}")
         return
 
     if message.content.startswith(imageTrigger):
