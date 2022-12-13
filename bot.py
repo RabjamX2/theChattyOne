@@ -39,34 +39,33 @@ async def on_message(message):
         for flag in flagged["categories"]:
             if flagged["categories"][flag]:
                 await message.channel.send(f"Yo {message.author}, stop it with the {flag}")
-        return
-
-    if message.content.startswith(imageTrigger):
-        response = openai.Image.create(
-            prompt=message.content[len(imageTrigger):],
-            n=1,
-            size="1024x1024"
-        ).data[0].url
-        
-        await message.channel.send(response)
-
-    if message.channel.id == channel_id:
-        # Filters out imageTriggers
+    else:
         if message.content.startswith(imageTrigger):
-            return
-        else:
-            # Generate a response using the chatGPT model
-            response = openai.Completion.create(
-                engine="text-davinci-003",
-                prompt=message.content,
-                max_tokens=1024,
+            response = openai.Image.create(
+                prompt=message.content[len(imageTrigger):],
                 n=1,
-                #Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
-                temperature=0.9
-            ).choices[0].text
-
-            # Send the response to the Discord channel
+                size="1024x1024"
+            ).data[0].url
+            
             await message.channel.send(response)
+
+        if message.channel.id == channel_id:
+            # Filters out imageTriggers
+            if message.content.startswith(imageTrigger):
+                return
+            else:
+                # Generate a response using the chatGPT model
+                response = openai.Completion.create(
+                    engine="text-davinci-003",
+                    prompt=message.content,
+                    max_tokens=1024,
+                    n=1,
+                    #Higher values means the model will take more risks. Try 0.9 for more creative applications, and 0 (argmax sampling) for ones with a well-defined answer.
+                    temperature=0.9
+                ).choices[0].text
+
+                # Send the response to the Discord channel
+                await message.channel.send(response)
 
 
 # Run the Discord client
