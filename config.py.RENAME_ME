@@ -1,0 +1,8 @@
+# Your OpenAI Token Can be found at https://beta.openai.com/account/api-keys
+openAIToken = "xxxxxxxxxxxxxxx"
+# Learn to make a bot at https://discord.com/developers/docs/intro#bots-and-apps
+discordBotToken = "xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Make sure channelID is an integer, not a string
+channelID = 1234565788
+
+# Don't forget to rename this file to config.py
