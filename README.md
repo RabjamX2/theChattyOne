@@ -4,7 +4,7 @@ theChattyOne - a python based Discord bot
 Before you start
 ----------
 
-This project has a virtual environment made using the built in pyhton module `venv` via `python -m venv venv`
+This project has a virtual environment made using the built in python module `venv` via `python -m venv venv`
 
 You can activate the virtual environment with 
 
