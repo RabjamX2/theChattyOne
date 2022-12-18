@@ -25,9 +25,10 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # Stop command
-#    if message.content == closeTrigger:
-#        await client.close()
+    if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+        if message.author == "RabjamX2#1936": 
+            if message.content == closeTrigger:
+                await client.close()
     try:
         # Check if the message content is flagged by the moderation model
         flagged = openai.Moderation.create(
@@ -36,12 +37,13 @@ async def on_message(message):
 
         # If the message is flagged, do not generate a response
         if flagged["flagged"]:
-            for flag in flagged["categories"]:
-                if flagged["categories"][flag]:
-                    if flag == "sexual":
-                        await message.channel.send(f"Yo {message.author.mention} , stop being horny... You down bad man")
-                    else:
-                        await message.channel.send(f"Yo {message.author.mention} , stop it with the talks of {flag}")
+            if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+                for flag in flagged["categories"]:
+                    if flagged["categories"][flag]:
+                        if flag == "sexual":
+                            await message.channel.send(f"Yo {message.author.mention} , stop being horny... You down bad man")
+                        else:
+                            await message.channel.send(f"Yo {message.author.mention} , stop it with the talks of {flag}")
         else:
             if message.content.startswith(imageTrigger):
                 response = openai.Image.create(
@@ -49,7 +51,7 @@ async def on_message(message):
                     n=1,
                     size="1024x1024"
                 ).data[0].url
-                
+
                 await message.channel.send(response)
             else:
                 if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
