@@ -37,7 +37,7 @@ async def on_message(message):
 
         # If the message is flagged, do not generate a response
         if flagged["flagged"]:
-            if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+            if message.channel.id == channel_id or message.channel.id == 1052392685568282675:
                 for flag in flagged["categories"]:
                     if flagged["categories"][flag]:
                         if flag == "sexual":
@@ -54,7 +54,7 @@ async def on_message(message):
 
                 await message.channel.send(response)
             else:
-                if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+                if message.channel.id == channel_id or message.channel.id == 1052392685568282675:
                     # Generate a response using the chatGPT model
                     response = openai.Completion.create(
                         engine="text-davinci-003",
