@@ -1,6 +1,6 @@
 import openai
 import discord
-from config import openAIToken, discordBotToken, channelID
+from config import openAIToken, discordBotToken, channelIDs
 
 # Set up the OpenAI API key
 openai.api_key = openAIToken
@@ -10,9 +10,6 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 client = discord.Client(intents=intents)
-
-# Define the target Discord channel
-channel_id = channelID
 
 # Triggers
 imageTrigger = "image of "
@@ -25,7 +22,7 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+    if message.channel.id == channelIDs or message.channel.id == 1052391367449522296:
         if message.author == "RabjamX2#1936": 
             if message.content == closeTrigger:
                 await client.close()
@@ -37,7 +34,7 @@ async def on_message(message):
 
         # If the message is flagged, do not generate a response
         if flagged["flagged"]:
-            if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+            if message.channel.id == channelIDs or message.channel.id == 1052391367449522296:
                 for flag in flagged["categories"]:
                     if flagged["categories"][flag]:
                         if flag == "sexual":
@@ -54,7 +51,7 @@ async def on_message(message):
 
                 await message.channel.send(response)
             else:
-                if message.channel.id == channel_id or message.channel.id == 1052391367449522296:
+                if message.channel.id == channelIDs or message.channel.id == 1052391367449522296:
                     # Generate a response using the chatGPT model
                     response = openai.Completion.create(
                         engine="text-davinci-003",
