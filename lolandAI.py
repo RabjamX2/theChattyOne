@@ -223,31 +223,29 @@ async def on_message(message):
             def __init__(self, timeout=1):
                 super().__init__()
                 self.value = None
-                
-                #self
-
             @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
             async def solo_duo_button(self, interaction, button):
-                if message.author == interaction.user:
-                    
-                    await interaction.response.send_message(list_of_elos[0])
+                if message.author == interaction.user:                  
+#                    self.clear_items()
+                    await interaction.response.edit_message(content=list_of_elos[0], view=None)
                     discord.ui.View.stop(self)
-                    ViewMenu.clear_items(self)
-
             @discord.ui.button(label="Double Up", style=discord.ButtonStyle.secondary)
             async def double_up_button(self, interaction, button):
                 if message.author == interaction.user:
-                    await interaction.response.send_message(list_of_elos[1])
+                    self.clear_items()
+                    await interaction.response.edit_message(content=list_of_elos[1], view=self)
                     discord.ui.View.stop(self)
             @discord.ui.button(label="Flex", style=discord.ButtonStyle.success)
             async def flex_button(self, interaction, button):
                 if message.author == interaction.user:
-                    await interaction.response.send_message(list_of_elos[2])
+                    self.clear_items()
+                    await interaction.response.edit_message(content=list_of_elos[2], view=self)
                     discord.ui.View.stop(self)
             @discord.ui.button(label="TFT", style=discord.ButtonStyle.danger)
             async def tft_button(self, interaction, button):
                 if message.author == interaction.user:
-                    await interaction.response.send_message(list_of_elos[3])
+                    self.clear_items()
+                    await interaction.response.edit_message(content=list_of_elos[3], view=self)
                     discord.ui.View.stop(self)
         await message.channel.send(view=ViewMenu())
             
