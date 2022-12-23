@@ -102,7 +102,6 @@ for player in list_player_data:
         temp_queue[ranked_dict["queue"][queue_type]] = temp_queue_data
     clean_player_data[player] = temp_queue
 
-#print(clean_player_data)
 
 def get_word(item):
     return item[-1]
