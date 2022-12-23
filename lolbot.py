@@ -19,8 +19,7 @@ tft_watcher = TftWatcher(lolKey)
 
 my_region = 'na1'
 
-list_players = ['RabjamX2',"kaı guy", "Teeony", "namfro", "Exurp", "Suitheism", "You Are A BK", "Airplane Legs", "Pickerel Prince", "Chives123", "Linkindorf"]
-
+list_players = ['RabjamX2',"kaı guy", "Teeony", "namfro", "Exurp", "Suitheism", "You Are A BK", "Airplane Legs", "Pickerel Prince", "Chives123", "Linkindorf", "Seegs", "Chnxi"]
 
 list_player_data = {}
 try:
@@ -108,6 +107,7 @@ for player in list_player_data:
 def get_word(item):
     return item[-1]
 
+
 # Handle messages received in the target Discord channel
 @client.event
 async def on_message(message):
@@ -145,53 +145,67 @@ async def on_message(message):
 
         
         for i , x in output.items():
+            place = 1
             response = ""
-            response += '{:<17} \n'.format(i)
+            response += f'__**{i}**__ \n'
+            response += "```"
             for j in x:
+                rank_place = str(place) + "."
+                response += '{:<4}'.format(rank_place)
+                place += 1
                 for k in j[0]:
-                    response += '{:<15}'.format(k)
+                    if len(k) <= 3:
+                        response += '{:<5}'.format(k)
+                    else:
+                        response += '{:<17}'.format(k)
                 response += "\n"
             response += "\n"
-            await message.channel.send(response)
+            await message.channel.send(response+"```")
+        
 
+        response = '__**Average ELO**__  ```'
+        elo_holder = []
+        for player , player_elo_data in clean_player_data.items():
+            player_total_elo = 0
+            elo_count = 0
+
+            for j , elodata in player_elo_data.items():
+                elo_count += 1
+                player_total_elo += elodata["elo"]
+
+            if elo_count:
+                elo_holder.append([player, player_total_elo / elo_count])
+            else:
+                elo_holder.append([player, player_total_elo])
+        elo_holder.sort(reverse=True, key=get_word)
+        place = 0
+        for name in elo_holder:
+            place += 1
+            rank_place = str(place) + "."
+            response += '{:<4}'.format(rank_place)
+            response += '{:<17}'.format(name[0])
+            response += '{:.0f} \n'.format(name[1])
+
+        await message.channel.send(response+"```")
 """
     elif message.content.startswith("elof "):
         elof_player = (message.content[len("elof "):]).strip()
         if elof_player in list_players:
             for queue,data in clean_player_data[elof_player].items():
-                await message.channel.send(queue + " Elo = " + str(data["elo"]))
+                await message.channel.send(queue + " Elo = " + str(data["elo"]))        
+
     elif message.content == ("test"):
-        async def menutest(message):
-            await message.reply
-class view_menu(discord.ui.View):
-    def __init__(self):
-        self.value = None
-    @discord.ui.button(label="test", style=discord.ButtonStyle.primary)
-    async def test1(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("pressed")
-            
+        class ViewMenu(discord.ui.View):
+            def __init__(self):
+                super().__init__()
+                self.value = None
+            @discord.ui.Button(label="Solo/Duo", style=discord.ButtonStyle.primary)
+            @discord.ui.Button(label="Double Up", style=discord.ButtonStyle.secondary)
+            @discord.ui.Button(label="Flex", style=discord.ButtonStyle.success)
+            @discord.ui.Button(label="TFT", style=discord.ButtonStyle.danger)
 """
+
+
 
 # Run the Discord client
 client.run(discordBotToken)
-
-{'RabjamX2': {'Double Up': {'Tier': 'Bronze',
-   'Rank': 'I',
-   'LP': 41,
-   'elo': 1341},
-  'Solo/Duo': {'Tier': 'Silver', 'Rank': 'III', 'LP': 18, 'elo': 2118},
-  'Flex': {'Tier': 'Silver', 'Rank': 'II', 'LP': 0, 'elo': 2200}},
- 'kaı guy': {'Solo/Duo': {'Tier': 'Platinum',
-   'Rank': 'IV',
-   'LP': 78,
-   'elo': 4078},
-  'Flex': {'Tier': 'Platinum', 'Rank': 'IV', 'LP': 81, 'elo': 4081},
-  'TFT': {'Tier': 'Platinum', 'Rank': 'III', 'LP': 95, 'elo': 4195}},
- 'Teeony': {'Solo/Duo': {'Tier': 'Platinum',
-   'Rank': 'IV',
-   'LP': 4,
-   'elo': 4004},
-  'Double Up': {'Tier': 'Gold', 'Rank': 'III', 'LP': 4, 'elo': 3104},
-  'Flex': {'Tier': 'Gold', 'Rank': 'II', 'LP': 42, 'elo': 3242},
-  'TFT': {'Tier': 'Platinum', 'Rank': 'II', 'LP': 59, 'elo': 4259}}}
-  
