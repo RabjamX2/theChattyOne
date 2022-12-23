@@ -223,6 +223,7 @@ async def on_message(message):
             def __init__(self, timeout=1):
                 super().__init__()
                 self.value = None
+                
                 #self
 
             @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
