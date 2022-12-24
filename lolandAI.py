@@ -1,7 +1,10 @@
 from riotwatcher import LolWatcher, TftWatcher, ApiError
 import openai
 import discord
+import pickle
 from config import openAIToken, discordBotToken, channelIDs , lolKey, list_players
+
+#from playerdatabase import clean_player_data as old_clean_player_data
 
 # Set up the OpenAI API key
 openai.api_key = openAIToken
@@ -53,7 +56,6 @@ ranked_dict = {
     }
 }
 
-clean_player_data = {}
 def get_clean_player_data():
     list_player_data = {}
     try:
@@ -77,7 +79,6 @@ def get_clean_player_data():
 
             list_player_data[player_name] = player_data_dict
 
-        global clean_player_data
         clean_player_data = {}
         for player in list_player_data:
             temp_queue = {}
@@ -98,22 +99,27 @@ def get_clean_player_data():
 
                 temp_queue[ranked_dict["queue"][queue_type]] = temp_queue_data
             clean_player_data[player] = temp_queue
-
-
+            
+        with open('newplayerdatabase.bin' , 'wb') as file:
+            pickle.dump(clean_player_data, file)
 
     except ApiError as err:
         if err.response.status_code == 429:
-            return 'future requests wait until the retry-after time passes'
+            print('TOOOOOO MANY RIOTWATCHER API REQUESTS')
         elif err.response.status_code == 404:
             print('Summoner with that ridiculous name not found.')
         else:
             print('Something went terribly wrong!!')
 
-get_clean_player_data()
-        
 def get_word(item):
     return item[-1]
 
+# To update playerdata base on script load
+get_clean_player_data()
+
+# Get clean_player_data from file - Might have to move this into client.event
+with open("newplayerdatabase.bin", "rb") as f: # "rb" because we want to read in binary mode
+    clean_player_data = pickle.load(f)
 
 # Handle messages received in the target Discord channel
 @client.event
@@ -131,11 +137,14 @@ async def on_message(message):
 
     elif message.content.lower() == ("elo update"):
         get_clean_player_data()
+
         await message.delete()
         
     elif message.content.lower() == ("elo leaderboard"):
         output={}
-        
+        with open("newplayerdatabase.bin", "rb") as f: # "rb" because we want to read in binary mode
+            clean_player_data = pickle.load(f)
+
         for queue_stat in LeaderBoard:
             queue_list = []
             for name in clean_player_data:
@@ -153,6 +162,7 @@ async def on_message(message):
             output[queue_stat] = queue_list
 
         
+        tonys_list = []
         for i , x in output.items():
             place = 1
             response = ""
@@ -169,9 +179,11 @@ async def on_message(message):
                         response += '{:<17}'.format(k)
                 response += "\n"
             response += "\n"
-            await message.channel.send(response+"```")
-        
+            response += "```"
 
+            tonys_list.append(response)
+
+            
         response = '__**Average ELO**__  ```'
         elo_holder = []
         for player , player_elo_data in clean_player_data.items():
@@ -193,6 +205,7 @@ async def on_message(message):
             place += 1
             rank_place = str(place) + "."
             response += '{:<4}'.format(rank_place)
+            
             last_tier = "IRON"
             for i, x in ranked_dict["tier"].items():
                 if x >= name[1]:
@@ -206,81 +219,66 @@ async def on_message(message):
                     elo_minus_rank = elo_minus_tier - (ranked_dict["rank"][last_rank])
                     break
                 last_rank = i
-            response += '{:<17} {:<11} {:<4}'.format(name[0], last_tier, last_rank)
-            response += '{:.0f} \n'.format(elo_minus_rank/2.5)
+            response += '{:<17} {:<11} {:<5}'.format(name[0], last_tier, last_rank)
+            response += '{:3.0f}   '.format(elo_minus_rank/2.5)
+            response += '{:.2f} \n'.format(name[1])
 
-        await message.channel.send(response+"```")
+        response += "```"
+        tonys_list.append(response)
+
+        for i in tonys_list:
+            await message.channel.send(i)
 
 
     elif message.content.startswith("elof "):
+        with open("newplayerdatabase.bin", "rb") as f: # "rb" because we want to read in binary mode
+            clean_player_data = pickle.load(f)
+
         list_of_elos = []
         elof_player = (message.content[len("elof "):]).strip()
         if elof_player in list_players:
             for queue,data in clean_player_data[elof_player].items():
-                list_of_elos.append(queue + " Elo = " + str(data["elo"]))
+                list_of_elos.append("`" + elof_player + "'s " + queue + " elo is " + str(data["elo"]) + "`")
 
         class ViewMenu(discord.ui.View):
-            def __init__(self, timeout=1):
+            def __init__(self, timeout):
                 super().__init__()
                 self.value = None
+                self.timeout = timeout
             @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
             async def solo_duo_button(self, interaction, button):
                 if message.author == interaction.user:                  
-#                    self.clear_items()
                     await interaction.response.edit_message(content=list_of_elos[0], view=None)
                     discord.ui.View.stop(self)
             @discord.ui.button(label="Double Up", style=discord.ButtonStyle.secondary)
             async def double_up_button(self, interaction, button):
                 if message.author == interaction.user:
-                    self.clear_items()
-                    await interaction.response.edit_message(content=list_of_elos[1], view=self)
+                    await interaction.response.edit_message(content=list_of_elos[1], view=None)
                     discord.ui.View.stop(self)
             @discord.ui.button(label="Flex", style=discord.ButtonStyle.success)
             async def flex_button(self, interaction, button):
                 if message.author == interaction.user:
-                    self.clear_items()
-                    await interaction.response.edit_message(content=list_of_elos[2], view=self)
+                    await interaction.response.edit_message(content=list_of_elos[2], view=None)
                     discord.ui.View.stop(self)
             @discord.ui.button(label="TFT", style=discord.ButtonStyle.danger)
             async def tft_button(self, interaction, button):
                 if message.author == interaction.user:
-                    self.clear_items()
-                    await interaction.response.edit_message(content=list_of_elos[3], view=self)
+                    await interaction.response.edit_message(content=list_of_elos[3], view=None)
                     discord.ui.View.stop(self)
-        await message.channel.send(view=ViewMenu())
             
+            async def on_error(self, interaction, error, item):
+                await interaction.response.edit_message(content="`" + elof_player + " has 0 elo in that category`" + item, view=None)
 
+            async def on_timeout(self):
+                self.value = "Timeout"
+        
+        await message.channel.send(view=ViewMenu(15))
+        await ViewMenu.wait()
+        if ViewMenu.value == "Timeout":
+            message.delete
 
-
-
-    # elif message.content == ("test"):
-    #     class ViewMenu(discord.ui.View):
-    #         def __init__(self):
-    #             super().__init__()
-    #             self.value = None
-    #         @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
-    #         async def solo_duo_button(self, interaction, button):
-    #             if message.author == interaction.user:
-    #                 await interaction.response.send_message("Solo")
-    #                 discord.ui.View.stop(self)
-    #         @discord.ui.button(label="Double Up", style=discord.ButtonStyle.secondary)
-    #         async def double_up_button(self, interaction, button):
-    #             if message.author == interaction.user:
-    #                 await interaction.response.send_message("Double Up")
-    #                 discord.ui.View.stop(self)
-    #         @discord.ui.button(label="Flex", style=discord.ButtonStyle.success)
-    #         async def flex_button(self, interaction, button):
-    #             if message.author == interaction.user:
-    #                 await interaction.response.send_message("Flex")
-    #                 discord.ui.View.stop(self)
-    #         @discord.ui.button(label="TFT", style=discord.ButtonStyle.danger)
-    #         async def tft_button(self, interaction, button):
-    #             if message.author == interaction.user:
-    #                 await interaction.response.send_message("TFT")
-    #                 discord.ui.View.stop(self)
-
-            
-
+    elif message.content.lower() == ("test"):
+        pass
 
 
     else:
