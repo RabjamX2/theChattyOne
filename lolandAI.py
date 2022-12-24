@@ -18,6 +18,7 @@ client = discord.Client(intents=intents)
 
 # https://riot-watcher.readthedocs.io/en/latest/index.html
 # https://riot-api-libraries.readthedocs.io/en/latest/
+# GET KEY FROM https://developer.riotgames.com/
 lol_watcher = LolWatcher(lolKey)
 tft_watcher = TftWatcher(lolKey)
 
@@ -27,8 +28,6 @@ imageTrigger = "image of "
 closeTrigger = "bye bot"
 
 LeaderBoard = ["Solo/Duo", "Flex", "TFT", "Double Up"]
-
-
 
 ranked_dict = {
     "rank" : {
@@ -59,6 +58,11 @@ ranked_dict = {
 def get_clean_player_data():
     list_player_data = {}
     try:
+        with open("newplayerdatabase.bin", "rb") as newfile: # "rb" because we want to read in binary mode
+            becoming_old_data = pickle.load(newfile)
+        with open('oldplayerdatabase.bin' , 'wb') as file:
+            pickle.dump(becoming_old_data, file)
+
         for player_name in list_players:
             player_data_dict = {}
 
@@ -111,15 +115,23 @@ def get_clean_player_data():
         else:
             print('Something went terribly wrong!!')
 
+get_clean_player_data()
+
+def is_there_update():
+    with open("newplayerdatabase.bin", "rb") as new_file:
+        with open('oldplayerdatabase.bin' , 'wb') as old_file:
+            if new_file == old_file:
+                return False
+            else:
+                search_and_compare(old_file, new_file)
+            
+def search_and_compare(old_database, new_database):
+    pass
+
+
 def get_word(item):
     return item[-1]
 
-# To update playerdata base on script load
-get_clean_player_data()
-
-# Get clean_player_data from file - Might have to move this into client.event
-with open("newplayerdatabase.bin", "rb") as f: # "rb" because we want to read in binary mode
-    clean_player_data = pickle.load(f)
 
 # Handle messages received in the target Discord channel
 @client.event
