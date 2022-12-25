@@ -4,3 +4,4 @@ requirements.txt
 newplayerdatabase.bin
 oldplayerdatabase.bin
 newplayerdatabase.bin
+*.bin

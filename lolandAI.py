@@ -1,7 +1,8 @@
 from riotwatcher import LolWatcher, TftWatcher, ApiError
 import openai
 import discord
-import pickle
+import pickle, filecmp
+import time, threading, datetime
 from config import openAIToken, discordBotToken, channelIDs , lolKey, list_players
 
 #from playerdatabase import clean_player_data as old_clean_player_data
@@ -109,29 +110,31 @@ def get_clean_player_data():
 
     except ApiError as err:
         if err.response.status_code == 429:
-            print('TOOOOOO MANY RIOTWATCHER API REQUESTS')
+            print('TOOOOOO MANY RIOTWATCHER API REQUESTS   @', datetime.datetime.now)
         elif err.response.status_code == 404:
-            print('Summoner with that ridiculous name not found.')
+            print('Summoner with that ridiculous name not found.   @', datetime.datetime.now)
         else:
-            print('Something went terribly wrong!!')
+            print('Something went terribly wrong!!   @', datetime.datetime.now)
 
-get_clean_player_data()
-
-def is_there_update():
+def find_the_change():
     with open("newplayerdatabase.bin", "rb") as new_file:
-        with open('oldplayerdatabase.bin' , 'wb') as old_file:
-            if new_file == old_file:
-                return False
-            else:
-                search_and_compare(old_file, new_file)
-            
-def search_and_compare(old_database, new_database):
-    pass
+        with open("oldplayerdatabase.bin" , "wb") as old_file:
+            (old_file, new_file)
 
+def run_get_clean_player_data():
+    while True:
+        # Run the get_clean_player_data function
+        get_clean_player_data()
+        is_there_change = filecmp.cmp("newplayerdatabase.bin", "oldplayerdatabase.bin", shallow=False)
+        if is_there_change():
+            find_the_change
 
+        # Sleep for 30 minutes (1800 seconds)
+        time.sleep(1800)
+
+# Used when sorting by elo for leaderboard
 def get_word(item):
     return item[-1]
-
 
 # Handle messages received in the target Discord channel
 @client.event
@@ -337,8 +340,11 @@ async def on_message(message):
             await message.channel.send(f"{message.author.mention}, you got me fucked up. Error: {e}")
 
 
-
-
+thread = threading.Thread(target=run_get_clean_player_data)
+# Start the thread
+thread.start()
 
 # Run the Discord client
 client.run(discordBotToken)
+
+
