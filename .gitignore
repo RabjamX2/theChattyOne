@@ -1,7 +1,5 @@
 
 config.py
 requirements.txt
-newplayerdatabase.bin
-oldplayerdatabase.bin
-newplayerdatabase.bin
 *.bin
+__pycache__/
