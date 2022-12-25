@@ -145,15 +145,15 @@ def find_the_change():
                     print(f"[{datetime.datetime.now()}] [find_the_change()] Change Found : {new_name} == {old_name} = {new_name == old_name} and \n[{datetime.datetime.now()}] [find_the_change()]          NEW DATA: {new_data}\n[{datetime.datetime.now()}] [find_the_change()]          OLD DATA: {old_data}")
                     for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(new_data.items(), old_data.items()):
                         if new_queue_type == old_queue_type and new_stats != old_stats:
-                            response = f"{player_name} has "
+                            response = f"***{player_name}*** has "
                             queue_type = new_queue_type
-                            if new_stats['wins'] != old_stats['wins']:
-                                response += f"won {new_stats['wins'] - old_stats['wins']} "
-                                if new_stats['loses'] != old_stats['loses']:
-                                    response += 'and '
-                            if new_stats['loses'] != old_stats['loses']:
-                                response += f"lost {new_stats['loses'] - old_stats['loses']} "
-                            response += f"{queue_type} games resulting in a "
+                            if new_stats['wins'] != old_stats['wins'] and new_stats['loses'] == old_stats['loses']:
+                                response += f"won {new_stats['wins'] - old_stats['wins']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
+                            elif new_stats['wins'] != old_stats['wins'] and new_stats['loses'] != old_stats['loses']:
+                                    response += f"won {new_stats['wins'] - old_stats['wins']} and lost {new_stats['loses'] - old_stats['loses']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
+                            elif new_stats['loses'] != old_stats['loses']:
+                                response += f"lost {new_stats['loses'] - old_stats['loses']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
+                            response += "resulting in a "
                             if new_stats['Tier'] != old_stats['Tier']:
                                 if ranked_dict['tier'][new_stats['Tier'].upper()] > ranked_dict['tier'][old_stats['Tier'].upper()]:
                                     response += "Tier promotion!!! :partying_face: <@&938057479907078185> rejoice!! \n"
