@@ -142,6 +142,7 @@ def find_the_change():
                 # TODO: I have to change it so compares after matching queuetypes, not just hoping both data are in same order
                 if new_name == old_name and new_data != old_data:
                     player_name = new_name
+                    print(f"[{datetime.datetime.now()}] [find_the_change()] Change Found : {new_name} == {old_name} = {new_name == old_name} and \n[{datetime.datetime.now()}] [find_the_change()]          NEW DATA: {new_data}\n[{datetime.datetime.now()}] [find_the_change()]          OLD DATA: {old_data}")
                     for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(new_data.items(), old_data.items()):
                         if new_queue_type == old_queue_type and new_stats != old_stats:
                             response = f"{player_name} has "
@@ -174,14 +175,12 @@ def find_the_change():
                                     response += f"{old_stats['LP'] - new_stats['LP']} LP loss. :sob:"
                             
                             else:
-                                print(f"[{datetime.datetime.now()}] [find_the_change()] {player_name} Stats are weird: ||New||: {new_stats} ||Old||: {old_stats}")
+                                print(f"[{datetime.datetime.now()}] [find_the_change()] Stats are weird : {player_name}  ||New||: {new_stats} ||Old||: {old_stats}")
                             
                             the_snitch.send(response)
 
                         else:
-                            print(f"[{datetime.datetime.now()}] [find_the_change()] {player_name} new_queue_type == old_queue_type is ({new_queue_type} == {old_queue_type} and {new_stats} != {old_stats}) failed")
-                else:
-                    print(f"[{datetime.datetime.now()}] [find_the_change()] (new_name == old_name and new_data != old_data) failed because {new_name} == {old_name} = {new_name == old_name} and {new_data} != {old_data} = {new_data != old_data}")
+                            print(f"[{datetime.datetime.now()}] [find_the_change()] Mismatch : {player_name} new_queue_type == old_queue_type is ({new_queue_type} == {old_queue_type} and {new_stats} != {old_stats}) failed")
 
 def run_get_clean_player_data():
     print(f"[{datetime.datetime.now()}] [run_get_clean_player_data()] Started Update Interval\n")
