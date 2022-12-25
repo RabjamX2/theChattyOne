@@ -139,6 +139,7 @@ def find_the_change():
         with open("oldplayerdatabase.bin" , "rb") as o_f:
             old_file = pickle.load(o_f)
             for (new_name, new_data), (old_name, old_data) in zip(new_file.items(), old_file.items()):
+                # TODO: I have to change it so compares after matching queuetypes, not just hoping both data are in same order
                 if new_name == old_name and new_data != old_data:
                     player_name = new_name
                     for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(new_data.items(), old_data.items()):
@@ -147,8 +148,8 @@ def find_the_change():
                             queue_type = new_queue_type
                             if new_stats['wins'] != old_stats['wins']:
                                 response += f"won {new_stats['wins'] - old_stats['wins']} "
-                            if new_stats['wins'] != old_stats['wins'] and new_stats['loses'] != old_stats['loses']:
-                                response += 'and '
+                                if new_stats['loses'] != old_stats['loses']:
+                                    response += 'and '
                             if new_stats['loses'] != old_stats['loses']:
                                 response += f"lost {new_stats['loses'] - old_stats['loses']} "
                             response += f"{queue_type} games resulting in a "
@@ -168,18 +169,29 @@ def find_the_change():
                                     response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
                             elif new_stats['LP'] != old_stats['LP']:
                                 if new_stats['LP'] > old_stats['LP']:
-                                    response += f"{new_stats['LP'] - old_stats['LP']} gain!"
+                                    response += f"{new_stats['LP'] - old_stats['LP']} LP gain! :partying_face:"
                                 elif new_stats['LP'] < old_stats['LP']:
-                                    response += f"{old_stats['LP'] - new_stats['LP']} loss. :sob:"
+                                    response += f"{old_stats['LP'] - new_stats['LP']} LP loss. :sob:"
+                            
+                            else:
+                                print(f"[{datetime.datetime.now()}] [find_the_change()] {player_name} Stats are weird: ||New||: {new_stats} ||Old||: {old_stats}")
                             
                             the_snitch.send(response)
 
+                        else:
+                            print(f"[{datetime.datetime.now()}] [find_the_change()] {player_name} new_queue_type == old_queue_type is ({new_queue_type} == {old_queue_type} and {new_stats} != {old_stats}) failed")
+                else:
+                    print(f"[{datetime.datetime.now()}] [find_the_change()] (new_name == old_name and new_data != old_data) failed because {new_name} == {old_name} = {new_name == old_name} and {new_data} != {old_data} = {new_data != old_data}")
+
 def run_get_clean_player_data():
+    print(f"[{datetime.datetime.now()}] [run_get_clean_player_data()] Started Update Interval\n")
     while True:
+        print(f"[{datetime.datetime.now()}] [run_get_clean_player_data()] Updated\n")
         get_clean_player_data()
         filecmp.clear_cache()
         are_the_files_same = filecmp.cmp("newplayerdatabase.bin", "oldplayerdatabase.bin", shallow=False)
         if are_the_files_same == False:
+            print(f"[{datetime.datetime.now()}] [run_get_clean_player_data()] Change Detected\n")
             find_the_change()
 
         # Sleep for 30 minutes (1800 seconds)
