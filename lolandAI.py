@@ -1,9 +1,9 @@
 from riotwatcher import LolWatcher, TftWatcher, ApiError
 import openai
 import discord
-import pickle, filecmp
+import pickle, filecmp #,urlopen, PIL TODO: using profile icon number from api call, make client.user avatar match LOL avatar 'http://ddragon.leagueoflegends.com/cdn/10.18.1/img/profileicon/[ICON ID].png'
 import time, threading, datetime
-from config import openAIToken, discordBotToken, channelIDs , lolKey, list_players
+from config import openAIToken, discordBotToken, channelIDs , lolKey, list_players, name_and_id, the_snitch_webhook_url
 
 #from playerdatabase import clean_player_data as old_clean_player_data
 
@@ -16,6 +16,8 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 client = discord.Client(intents=intents)
+
+the_snitch = discord.SyncWebhook.from_url(the_snitch_webhook_url)
 
 # https://riot-watcher.readthedocs.io/en/latest/index.html
 # https://riot-api-libraries.readthedocs.io/en/latest/
@@ -57,18 +59,23 @@ ranked_dict = {
 }
 
 def get_clean_player_data():
+
     list_player_data = {}
     try:
         with open("newplayerdatabase.bin", "rb") as newfile: # "rb" because we want to read in binary mode
             becoming_old_data = pickle.load(newfile)
+
         with open('oldplayerdatabase.bin' , 'wb') as file:
             pickle.dump(becoming_old_data, file)
 
-        for player_name in list_players:
+        #print("Timing started")
+        #last_time = time.time()
+
+        for player_name, player_id in name_and_id.items():
             player_data_dict = {}
 
-            temp_player = (lol_watcher.summoner.by_name(my_region, player_name))
-            player_ranked_lol_stats = lol_watcher.league.by_summoner(my_region, temp_player['id'])
+            #temp_player = (lol_watcher.summoner.by_name(my_region, player_name))  # Not needed since using name_and_id (this loop takes about 13 seconds but after pregenerated ids takes 9 seconds)
+            player_ranked_lol_stats = lol_watcher.league.by_summoner(my_region, player_id)
             
             ranked_lol_data = list(player_ranked_lol_stats)
 
@@ -76,7 +83,7 @@ def get_clean_player_data():
                 if ranked_lol_data[i]:
                     player_data_dict[ranked_lol_data[i]["queueType"]] = ranked_lol_data[i]
             
-            tft_data = tft_watcher.league.by_summoner(my_region, temp_player['id'])
+            tft_data = tft_watcher.league.by_summoner(my_region, player_id)
 
             for i in range(0, len(tft_data)):
                 if tft_data:
@@ -84,11 +91,20 @@ def get_clean_player_data():
 
             list_player_data[player_name] = player_data_dict
 
+        #print("time spent 'for player_name in list_players:' ", time.time() - last_time)
+        #last_time = time.time()
+
         clean_player_data = {}
         for player in list_player_data:
             temp_queue = {}
             for queue_type in list_player_data[player]:
                 temp_queue_data = {}
+
+                player_wins = list_player_data[player][queue_type]["wins"]
+                temp_queue_data["wins"] = player_wins
+
+                player_loses = list_player_data[player][queue_type]["wins"]
+                temp_queue_data["loses"] = player_loses
             
                 player_tier = list_player_data[player][queue_type]["tier"]
                 temp_queue_data["Tier"] = player_tier.capitalize()
@@ -99,6 +115,7 @@ def get_clean_player_data():
                 player_LP = list_player_data[player][queue_type]["leaguePoints"]
                 temp_queue_data["LP"] = player_LP
 
+                # Make sure elo is added last to temp_queue_data 
                 player_elo = ranked_dict["tier"][player_tier] + ranked_dict["rank"][player_rank] + (player_LP*2.5)
                 temp_queue_data["elo"] = player_elo
 
@@ -117,17 +134,53 @@ def get_clean_player_data():
             print('Something went terribly wrong!!   @', datetime.datetime.now)
 
 def find_the_change():
-    with open("newplayerdatabase.bin", "rb") as new_file:
-        with open("oldplayerdatabase.bin" , "wb") as old_file:
-            (old_file, new_file)
+    with open("newplayerdatabase.bin", "rb") as n_f:
+        new_file = pickle.load(n_f)
+        with open("oldplayerdatabase.bin" , "rb") as o_f:
+            old_file = pickle.load(o_f)
+            for (new_name, new_data), (old_name, old_data) in zip(new_file.items(), old_file.items()):
+                if new_name == old_name and new_data != old_data:
+                    player_name = new_name
+                    for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(new_data.items(), old_data.items()):
+                        if new_queue_type == old_queue_type and new_stats != old_stats:
+                            response = f"{player_name} has "
+                            queue_type = new_queue_type
+                            if new_stats['wins'] != old_stats['wins']:
+                                response += f"won {new_stats['wins'] - old_stats['wins']} "
+                            if new_stats['wins'] != old_stats['wins'] and new_stats['loses'] != old_stats['loses']:
+                                response += 'and '
+                            if new_stats['loses'] != old_stats['loses']:
+                                response += f"lost {new_stats['loses'] - old_stats['loses']} "
+                            response += f"{queue_type} games resulting in a "
+                            if new_stats['Tier'] != old_stats['Tier']:
+                                if ranked_dict['tier'][new_stats['Tier'].upper()] > ranked_dict['tier'][old_stats['Tier'].upper()]:
+                                    response += "Tier promotion!!! :partying_face: <@&938057479907078185> rejoice!! \n"
+                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                                elif ranked_dict['tier'][new_stats['Tier'].upper()] < ranked_dict['tier'][old_stats['Tier'].upper()]:
+                                    response += "tier demotion... :sob: \n"
+                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                            elif new_stats['Rank'] != old_stats['Rank']:
+                                if ranked_dict['rank'][new_stats['Rank'].upper()] > ranked_dict['rank'][old_stats['Rank'].upper()]:
+                                    response += "Rank up!!! :partying_face: \n"
+                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                                elif ranked_dict['rank'][new_stats['Rank'].upper()] < ranked_dict['rank'][old_stats['Rank'].upper()]:
+                                    response += "Rank down... :sob: \n"
+                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                            elif new_stats['LP'] != old_stats['LP']:
+                                if new_stats['LP'] > old_stats['LP']:
+                                    response += f"{new_stats['LP'] - old_stats['LP']} gain!"
+                                elif new_stats['LP'] < old_stats['LP']:
+                                    response += f"{old_stats['LP'] - new_stats['LP']} loss. :sob:"
+                            
+                            the_snitch.send(response)
 
 def run_get_clean_player_data():
     while True:
-        # Run the get_clean_player_data function
         get_clean_player_data()
-        is_there_change = filecmp.cmp("newplayerdatabase.bin", "oldplayerdatabase.bin", shallow=False)
-        if is_there_change():
-            find_the_change
+        filecmp.clear_cache()
+        are_the_files_same = filecmp.cmp("newplayerdatabase.bin", "oldplayerdatabase.bin", shallow=False)
+        if are_the_files_same == False:
+            find_the_change()
 
         # Sleep for 30 minutes (1800 seconds)
         time.sleep(1800)
@@ -148,7 +201,7 @@ async def on_message(message):
         await client.close()
 
     # Bring up leader board and update  
-    # TO DO: make then update a function and call it on every command 
+    # TODO: make then update a function and call it on every command 
 
     elif message.content.lower() == ("elo update"):
         get_clean_player_data()
@@ -346,5 +399,4 @@ thread.start()
 
 # Run the Discord client
 client.run(discordBotToken)
-
 
