@@ -1,6 +1,6 @@
 from riotwatcher import LolWatcher, TftWatcher, ApiError
 import openai
-import discord
+import discord #TODO: implement commands, if not just for command autocompletion
 import pickle, filecmp #,urlopen, PIL TODO: using profile icon number from api call, make client.user avatar match LOL avatar 'http://ddragon.leagueoflegends.com/cdn/10.18.1/img/profileicon/[ICON ID].png'
 import time, threading, datetime
 from config import openAIToken, discordBotToken, channelIDs , lolKey, list_players, name_and_id, the_snitch_webhook_url
@@ -140,43 +140,53 @@ def find_the_change():
             old_file = pickle.load(o_f)
             for (new_name, new_data), (old_name, old_data) in zip(new_file.items(), old_file.items()):
                 # TODO: I have to change it so compares after matching queuetypes, not just hoping both data are in same order
-                if new_name == old_name and new_data != old_data:
+                ordered_new_data = {}
+                ordered_old_data = {}
+                for queue in LeaderBoard:
+                    if queue in new_data and queue in old_data:
+                        ordered_new_data[queue] = new_data[queue]
+                        ordered_old_data[queue] = old_data[queue]
+                if new_name == old_name and ordered_new_data != ordered_old_data:
                     player_name = new_name
-                    print(f"[{datetime.datetime.now()}] [find_the_change()] Change Found : {new_name} == {old_name} = {new_name == old_name} and \n[{datetime.datetime.now()}] [find_the_change()]          NEW DATA: {new_data}\n[{datetime.datetime.now()}] [find_the_change()]          OLD DATA: {old_data}")
-                    for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(new_data.items(), old_data.items()):
+                    print(f"[{datetime.datetime.now()}] [find_the_change()] Change Found : {new_name} == {old_name} = {new_name == old_name} and \n[{datetime.datetime.now()}] [find_the_change()]          NEW DATA: {new_data}\n[{datetime.datetime.now()}] [find_the_change()]          OLD DATA: {old_data}\n[{datetime.datetime.now()}] [find_the_change()]          ORDERED NEW DATA: {ordered_new_data}\n[{datetime.datetime.now()}] [find_the_change()]          ORDERED OLD DATA: {ordered_old_data}")
+             
+                        
+                    for (new_queue_type, new_stats), (old_queue_type, old_stats) in zip(ordered_new_data.items(), ordered_old_data.items()):
                         if new_queue_type == old_queue_type and new_stats != old_stats:
-                            response = f"***{player_name}*** has "
+                            response = f"**{player_name}** has "
                             queue_type = new_queue_type
                             if new_stats['wins'] != old_stats['wins'] and new_stats['losses'] == old_stats['losses']:
-                                response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                                response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} **{queue_type}** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''}"
                             elif new_stats['wins'] != old_stats['wins'] and new_stats['losses'] != old_stats['losses']:
-                                    response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} and lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                                    response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} and lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} **{queue_type}** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''}"
                             elif new_stats['losses'] != old_stats['losses']:
-                                response += f"lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                                response += f"lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} **{queue_type}** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''}"
                             else:
-                                response += "somehow changed his elo "
+                                response += " somehow changed his elo "
+                            if new_stats['Tier'] != old_stats['Tier'] or new_stats['Rank'] != old_stats['Rank'] or new_stats['LP'] != old_stats['LP']:
+                                response += " resulting in a "
+                                if new_stats['Tier'] != old_stats['Tier']:
+                                    if ranked_dict['tier'][new_stats['Tier'].upper()] > ranked_dict['tier'][old_stats['Tier'].upper()]:
+                                        response += "Tier promotion!!! :partying_face: <@&938057479907078185> rejoice!! \n"
+                                    elif ranked_dict['tier'][new_stats['Tier'].upper()] < ranked_dict['tier'][old_stats['Tier'].upper()]:
+                                        response += "tier demotion... :sob:   "
+                                    response += f"**{player_name}** is now **{new_stats['Tier']}** **{new_stats['Rank']}** at **{new_stats['LP']}** LP"
 
-                            response += "resulting in a "
-                            if new_stats['Tier'] != old_stats['Tier']:
-                                if ranked_dict['tier'][new_stats['Tier'].upper()] > ranked_dict['tier'][old_stats['Tier'].upper()]:
-                                    response += "Tier promotion!!! :partying_face: <@&938057479907078185> rejoice!! \n"
-                                elif ranked_dict['tier'][new_stats['Tier'].upper()] < ranked_dict['tier'][old_stats['Tier'].upper()]:
-                                    response += "tier demotion... :sob:   "
-                                response += f"***{player_name}*** is now ***{new_stats['Tier']}*** ***{new_stats['Rank']}*** at ***{new_stats['LP']}*** LP"
+                                elif new_stats['Rank'] != old_stats['Rank']:
+                                    if ranked_dict['rank'][new_stats['Rank'].upper()] > ranked_dict['rank'][old_stats['Rank'].upper()]:
+                                        response += "rank up!!! :partying_face:   "
+                                    elif ranked_dict['rank'][new_stats['Rank'].upper()] < ranked_dict['rank'][old_stats['Rank'].upper()]:
+                                        response += "rank down... :sob:   "
+                                    response += f"**{player_name}** is now **{new_stats['Tier']}** **{new_stats['Rank']}** at **{new_stats['LP']}** LP"
 
-                            elif new_stats['Rank'] != old_stats['Rank']:
-                                if ranked_dict['rank'][new_stats['Rank'].upper()] > ranked_dict['rank'][old_stats['Rank'].upper()]:
-                                    response += "rank up!!! :partying_face:   "
-                                elif ranked_dict['rank'][new_stats['Rank'].upper()] < ranked_dict['rank'][old_stats['Rank'].upper()]:
-                                    response += "rank down... :sob:   "
-                                response += f"***{player_name}*** is now ***{new_stats['Tier']}*** ***{new_stats['Rank']}*** at ***{new_stats['LP']}*** LP"
-
-                            elif new_stats['LP'] != old_stats['LP']:
-                                if new_stats['LP'] > old_stats['LP']:
-                                    response += f"{new_stats['LP'] - old_stats['LP']} LP gain! :partying_face:"
-                                elif new_stats['LP'] < old_stats['LP']:
-                                    response += f"{old_stats['LP'] - new_stats['LP']} LP loss. :sob:"
-                            
+                                elif new_stats['LP'] != old_stats['LP']:
+                                    if new_stats['LP'] > old_stats['LP']:
+                                        response += f"{new_stats['LP'] - old_stats['LP']} LP gain! :partying_face:"
+                                    elif new_stats['LP'] < old_stats['LP']:
+                                        response += f"{old_stats['LP'] - new_stats['LP']} LP loss. :sob:"
+                            elif new_stats['LP'] == 0 and old_stats['LP'] == 0:
+                                    response =+ ". Luckily, you can't derank from 0 LP. :sweat_smile:"
+                                
                             else:
                                 print(f"[{datetime.datetime.now()}] [find_the_change()] Stats are weird : {player_name}  ||New||: {new_stats} ||Old||: {old_stats}")
                             
@@ -241,7 +251,7 @@ async def on_message(message):
             output[queue_stat] = queue_list
 
         
-        tonys_list = []
+        leaderboard_list = {}
         for i , x in output.items():
             place = 1
             response = ""
@@ -260,11 +270,11 @@ async def on_message(message):
             response += "\n"
             response += "```"
 
-            tonys_list.append(response)
+            leaderboard_list[f'__**{i}**__'] = response
 
             
-        response = '__**Average ELO**__  ```'
         elo_holder = []
+        response = "__**Average ELO**__ ```"
         for player , player_elo_data in clean_player_data.items():
             player_total_elo = 0
             elo_count = 0
@@ -303,10 +313,30 @@ async def on_message(message):
             response += '{:.2f} \n'.format(name[1])
 
         response += "```"
-        tonys_list.append(response)
+        leaderboard_list['__**Average ELO**__'] = response
+        
+        class ViewSelect(discord.ui.View):
+            def __init__(self, timeout):
+                super().__init__()
+                self.timeout = timeout
+            @discord.ui.select(
+                placeholder="Choose a leaderboard",
+                min_values=1,
+                max_values=5,
+                options=[
+                    discord.SelectOption(label="Solo/Duo"),
+                    discord.SelectOption(label="Flex"),
+                    discord.SelectOption(label="TFT"),
+                    discord.SelectOption(label="Double Up"),
+                    discord.SelectOption(label="Average ELO")]
+            )
+            async def callback(self, interaction, select):
+                if message.author == interaction.user: 
+                    discord.ui.View.stop(self)
+                    for option in select.values:
+                        await message.channel.send(leaderboard_list[f"__**{option}**__"])
+        await message.channel.send(view=ViewSelect(15), delete_after=15)
 
-        for i in tonys_list:
-            await message.channel.send(i)
 
 
     elif message.content.startswith("elof "):
@@ -319,7 +349,7 @@ async def on_message(message):
                 list_of_elos[queue] = str(data["elo"])
 
         # creates a view with four buttons
-            class ViewMenu(discord.ui.View):
+            class ViewButton(discord.ui.View):
                 def __init__(self, timeout):
                     super().__init__()
                     self.timeout = timeout
@@ -346,14 +376,34 @@ async def on_message(message):
                 async def on_error(self, interaction, error, item):
                     await interaction.response.send_message(content="`" + elof_player + " has 0 elo in " + item.label + "`")
             # displays the view
-            await message.channel.send(view=ViewMenu(15), delete_after=15)
+            await message.channel.send(view=ViewButton(15), delete_after=15)
             
         else:
             await message.channel.send("`Player not found`")
 
 
     elif message.content.lower() == ("test"):
-        pass
+        class ViewSelect(discord.ui.View):
+            def __init__(self, timeout):
+                super().__init__()
+                self.timeout = timeout
+            @discord.ui.select(
+                placeholder="Choose a leaderboard",
+                min_values=1,
+                max_values=5,
+                options=[
+                    discord.SelectOption(label="Solo/Duo"),
+                    discord.SelectOption(label="Flex"),
+                    discord.SelectOption(label="TFT"),
+                    discord.SelectOption(label="Double Up"),
+                    discord.SelectOption(label="Average ELO")]
+            )
+            async def callback(self, interaction, select):
+                discord.ui.View.stop(self)
+                select.disabled = True
+                await interaction.response.edit_message(view=self)
+                await message.channel.send(select.values)
+        await message.channel.send(view=ViewSelect(15))
 
 
     else:
