@@ -103,8 +103,8 @@ def get_clean_player_data():
                 player_wins = list_player_data[player][queue_type]["wins"]
                 temp_queue_data["wins"] = player_wins
 
-                player_loses = list_player_data[player][queue_type]["wins"]
-                temp_queue_data["loses"] = player_loses
+                player_losses = list_player_data[player][queue_type]["losses"]
+                temp_queue_data["losses"] = player_losses
             
                 player_tier = list_player_data[player][queue_type]["tier"]
                 temp_queue_data["Tier"] = player_tier.capitalize()
@@ -147,27 +147,30 @@ def find_the_change():
                         if new_queue_type == old_queue_type and new_stats != old_stats:
                             response = f"***{player_name}*** has "
                             queue_type = new_queue_type
-                            if new_stats['wins'] != old_stats['wins'] and new_stats['loses'] == old_stats['loses']:
-                                response += f"won {new_stats['wins'] - old_stats['wins']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
-                            elif new_stats['wins'] != old_stats['wins'] and new_stats['loses'] != old_stats['loses']:
-                                    response += f"won {new_stats['wins'] - old_stats['wins']} and lost {new_stats['loses'] - old_stats['loses']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
-                            elif new_stats['loses'] != old_stats['loses']:
-                                response += f"lost {new_stats['loses'] - old_stats['loses']} ***{queue_type}*** game{'s' if (new_stats['loses'] - old_stats['loses']) > 1 else ''} "
+                            if new_stats['wins'] != old_stats['wins'] and new_stats['losses'] == old_stats['losses']:
+                                response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                            elif new_stats['wins'] != old_stats['wins'] and new_stats['losses'] != old_stats['losses']:
+                                    response += f"won {'one' if (new_stats['wins'] - old_stats['wins']) == 1 else (new_stats['wins'] - old_stats['wins'])} and lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                            elif new_stats['losses'] != old_stats['losses']:
+                                response += f"lost {'one' if (new_stats['losses'] - old_stats['losses']) == 1 else (new_stats['losses'] - old_stats['losses'])} ***{queue_type}*** game{'s' if (new_stats['losses'] - old_stats['losses']) > 1 else ''} "
+                            else:
+                                response += "somehow changed his elo "
+
                             response += "resulting in a "
                             if new_stats['Tier'] != old_stats['Tier']:
                                 if ranked_dict['tier'][new_stats['Tier'].upper()] > ranked_dict['tier'][old_stats['Tier'].upper()]:
                                     response += "Tier promotion!!! :partying_face: <@&938057479907078185> rejoice!! \n"
-                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
                                 elif ranked_dict['tier'][new_stats['Tier'].upper()] < ranked_dict['tier'][old_stats['Tier'].upper()]:
-                                    response += "tier demotion... :sob: \n"
-                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                                    response += "tier demotion... :sob:   "
+                                response += f"***{player_name}*** is now ***{new_stats['Tier']}*** ***{new_stats['Rank']}*** at ***{new_stats['LP']}*** LP"
+
                             elif new_stats['Rank'] != old_stats['Rank']:
                                 if ranked_dict['rank'][new_stats['Rank'].upper()] > ranked_dict['rank'][old_stats['Rank'].upper()]:
-                                    response += "Rank up!!! :partying_face: \n"
-                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                                    response += "rank up!!! :partying_face:   "
                                 elif ranked_dict['rank'][new_stats['Rank'].upper()] < ranked_dict['rank'][old_stats['Rank'].upper()]:
-                                    response += "Rank down... :sob: \n"
-                                    response += f"{player_name} is now {new_stats['Tier']} {new_stats['Rank']} at {new_stats['LP']} LP"
+                                    response += "rank down... :sob:   "
+                                response += f"***{player_name}*** is now ***{new_stats['Tier']}*** ***{new_stats['Rank']}*** at ***{new_stats['LP']}*** LP"
+
                             elif new_stats['LP'] != old_stats['LP']:
                                 if new_stats['LP'] > old_stats['LP']:
                                     response += f"{new_stats['LP'] - old_stats['LP']} LP gain! :partying_face:"
@@ -178,9 +181,6 @@ def find_the_change():
                                 print(f"[{datetime.datetime.now()}] [find_the_change()] Stats are weird : {player_name}  ||New||: {new_stats} ||Old||: {old_stats}")
                             
                             the_snitch.send(response)
-
-                        else:
-                            print(f"[{datetime.datetime.now()}] [find_the_change()] Mismatch : {player_name} new_queue_type == old_queue_type is ({new_queue_type} == {old_queue_type} and {new_stats} != {old_stats}) failed")
 
 def run_get_clean_player_data():
     print(f"[{datetime.datetime.now()}] [run_get_clean_player_data()] Started Update Interval\n")
@@ -312,49 +312,45 @@ async def on_message(message):
     elif message.content.startswith("elof "):
         with open("newplayerdatabase.bin", "rb") as f: # "rb" because we want to read in binary mode
             clean_player_data = pickle.load(f)
-
-        list_of_elos = []
+        list_of_elos = {}
         elof_player = (message.content[len("elof "):]).strip()
-        if elof_player in list_players:
-            for queue,data in clean_player_data[elof_player].items():
-                list_of_elos.append("`" + elof_player + "'s " + queue + " elo is " + str(data["elo"]) + "`")
+        if elof_player.lower() in [name.lower() for name in list_players]:
+            for queue,data in {name.lower(): data for name, data in clean_player_data.items()}[elof_player.lower()].items():
+                list_of_elos[queue] = str(data["elo"])
 
-        class ViewMenu(discord.ui.View):
-            def __init__(self, timeout):
-                super().__init__()
-                self.value = None
-                self.timeout = timeout
-            @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
-            async def solo_duo_button(self, interaction, button):
-                if message.author == interaction.user:                  
-                    await interaction.response.edit_message(content=list_of_elos[0], view=None)
-                    discord.ui.View.stop(self)
-            @discord.ui.button(label="Double Up", style=discord.ButtonStyle.secondary)
-            async def double_up_button(self, interaction, button):
-                if message.author == interaction.user:
-                    await interaction.response.edit_message(content=list_of_elos[1], view=None)
-                    discord.ui.View.stop(self)
-            @discord.ui.button(label="Flex", style=discord.ButtonStyle.success)
-            async def flex_button(self, interaction, button):
-                if message.author == interaction.user:
-                    await interaction.response.edit_message(content=list_of_elos[2], view=None)
-                    discord.ui.View.stop(self)
-            @discord.ui.button(label="TFT", style=discord.ButtonStyle.danger)
-            async def tft_button(self, interaction, button):
-                if message.author == interaction.user:
-                    await interaction.response.edit_message(content=list_of_elos[3], view=None)
-                    discord.ui.View.stop(self)
+        # creates a view with four buttons
+            class ViewMenu(discord.ui.View):
+                def __init__(self, timeout):
+                    super().__init__()
+                    self.timeout = timeout
+                @discord.ui.button(label="Solo/Duo", style=discord.ButtonStyle.primary)
+                async def solo_duo_button(self, interaction, button):
+                    if message.author == interaction.user:                  
+                        await interaction.response.send_message(content="`" + elof_player + "'s Solo/Duo elo is " + list_of_elos["Solo/Duo"] + "`")
+                        discord.ui.View.stop(self)
+                @discord.ui.button(label="Double Up", style=discord.ButtonStyle.secondary)
+                async def double_up_button(self, interaction, button):
+                    if message.author == interaction.user:
+                        await interaction.response.send_message(content="`" + elof_player + "'s Double Up elo is " + list_of_elos["Double Up"] + "`")
+                        discord.ui.View.stop(self)
+                @discord.ui.button(label="Flex", style=discord.ButtonStyle.success)
+                async def flex_button(self, interaction, button):
+                    if message.author == interaction.user:
+                        await interaction.response.send_message(content="`" + elof_player + "'s Flex elo is " + list_of_elos["Flex"] + "`")
+                        discord.ui.View.stop(self)
+                @discord.ui.button(label="TFT", style=discord.ButtonStyle.danger)
+                async def tft_button(self, interaction, button):
+                    if message.author == interaction.user:
+                        await interaction.response.send_message(content="`" + elof_player + "'s TFT elo is " + list_of_elos["TFT"] + "`")
+                        discord.ui.View.stop(self)
+                async def on_error(self, interaction, error, item):
+                    await interaction.response.send_message(content="`" + elof_player + " has 0 elo in " + item.label + "`")
+            # displays the view
+            await message.channel.send(view=ViewMenu(15), delete_after=15)
             
-            async def on_error(self, interaction, error, item):
-                await interaction.response.edit_message(content="`" + elof_player + " has 0 elo in that category`" + item, view=None)
+        else:
+            await message.channel.send("`Player not found`")
 
-            async def on_timeout(self):
-                self.value = "Timeout"
-        
-        await message.channel.send(view=ViewMenu(15))
-        await ViewMenu.wait()
-        if ViewMenu.value == "Timeout":
-            message.delete
 
     elif message.content.lower() == ("test"):
         pass
@@ -410,4 +406,3 @@ thread.start()
 
 # Run the Discord client
 client.run(discordBotToken)
-
