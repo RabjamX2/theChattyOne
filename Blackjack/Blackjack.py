@@ -1,4 +1,11 @@
+import discord
 from deck_maker import deck_maker
+from config import discordBotToken, channelIDs
+
+intents = discord.Intents.default()
+intents.members = True
+intents.message_content = True
+client = discord.Client(intents=intents)
 
 # Make a new deck
 dealer_shoe = deck_maker(number_of_decks=1)
@@ -86,6 +93,7 @@ def double_down(betting_box):
         (betting_box.cards_in_hand).append(dealer_shoe.pop(0))
         betting_box.stood = True
 
+
 def deal_blackjack(table):
     # Initial Deal
     for second_step in [0,1]:
@@ -109,9 +117,17 @@ def deal_blackjack(table):
             if hand.busted == False:
                 pass
                 # Give em options
-            
 
-
+# @client.event
+# async def on_message(message):
+#     if message.author == client.user:
+#         return
+    
+#     if message.channel.id == channelIDs:
+#         if message.content.lower() == "blackjack":
+#             pass
 
 
 deal_blackjack(blackjack_table)
+
+#client.run(discordBotToken)
