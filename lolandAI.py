@@ -381,31 +381,6 @@ async def on_message(message):
         else:
             await message.channel.send("`Player not found`")
 
-
-    elif message.content.lower() == ("test"):
-        class ViewSelect(discord.ui.View):
-            def __init__(self, timeout):
-                super().__init__()
-                self.timeout = timeout
-            @discord.ui.select(
-                placeholder="Choose a leaderboard",
-                min_values=1,
-                max_values=5,
-                options=[
-                    discord.SelectOption(label="Solo/Duo"),
-                    discord.SelectOption(label="Flex"),
-                    discord.SelectOption(label="TFT"),
-                    discord.SelectOption(label="Double Up"),
-                    discord.SelectOption(label="Average ELO")]
-            )
-            async def callback(self, interaction, select):
-                discord.ui.View.stop(self)
-                select.disabled = True
-                await interaction.response.edit_message(view=self)
-                await message.channel.send(select.values)
-        await message.channel.send(view=ViewSelect(15))
-
-
     else:
         try:
             # Check if the message content is flagged by the moderation model
