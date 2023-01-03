@@ -9,8 +9,7 @@ intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 
-discord_id_dict = {"RabjamX2#1936":181262275569647616,"Teeony#8274":342421820021932042,"Don Pack#4076":171084724234616842}
-discord_id_name = {"RabjamX2#1936":'Rabjam', "Teeony#8274":'Tony', "Don Pack#4076":"Rudy"}
+discord_id_name = {"RabjamX2#1936":'Rabjam', "Teeony#8274":'Tony', "Don Pack#4076":"Rudy", "KaiO#8306" : "KaiO"}
 
 with open('player_balances.bin', 'rb') as file:
     player_balances = pickle.load(file)
@@ -18,13 +17,16 @@ with open('player_balances.bin', 'rb') as file:
 class the_players:
     def __init__(self, player : str) -> None:
         self.player = player
-        self.name = discord_id_name[self.player]
-        self.balance = player_balances[self.player]
-        self.discord_ID = discord_id_dict[self.player]
+        if player in player_balances:
+            self.balance = player_balances[self.player]
+        else:
+            player_balances[self.player] = 100000
+        #self.name = discord_id_name[self.player]
+        
 
 
 # Make a new deck
-dealer_shoe = deck_maker(number_of_decks=1)
+dealer_shoe = deck_maker(number_of_decks=8)
 burn_card = dealer_shoe.pop(0)
 
 the_Table = {1:False,2:False,3:False,4:False,100:False}
@@ -220,7 +222,7 @@ async def self(interaction: discord.Interaction, bet: int):
     main_player = the_players(player = str(interaction.user))
     print(main_player.player)
     if int(bet) > main_player.balance:
-        await interaction.response.send_message(content=f"You only have {main_player.balance}, {main_player.name}!", ephemeral=True)
+        await interaction.response.send_message(content=f"You only have {main_player.balance}, {main_player.player}!", ephemeral=True)
     else:
         betting_boxes(betting_box = 1, player = main_player.player, bet_amount = int(bet))
         betting_boxes(betting_box = 100, player = 'dealer', bet_amount = 0)
@@ -248,13 +250,12 @@ async def self(interaction: discord.Interaction, bet: int):
                 await update_embed(embed_bj, end=True)
                 await button_interaction.response.defer()
 
-            if len(the_Table[1].cards_in_hand) == 2:
-                @discord.ui.button(label="Double Down", custom_id="double_button", style=discord.ButtonStyle.success)
-                async def double_button(self, button_interaction: discord.Interaction, button : discord.ui.Button):
-                    double_down(the_Table[1])
-                    self.clear_items()
-                    await update_embed(embed_bj, end=True)
-                    await button_interaction.response.defer()
+            @discord.ui.button(label="Double Down", custom_id="double_button", style=discord.ButtonStyle.success)
+            async def double_button(self, button_interaction: discord.Interaction, button : discord.ui.Button):
+                double_down(the_Table[1])
+                self.clear_items()
+                await update_embed(embed_bj, end=True)
+                await button_interaction.response.defer()
         
             if the_Table[1].splittable:
                 @discord.ui.button(label="Split", custom_id="split_button", style=discord.ButtonStyle.danger)
@@ -316,7 +317,7 @@ async def self(interaction: discord.Interaction, bet: int):
                     inline=False
                 )
 
-            await interaction.followup.send(embed=embed_bj, view=view)
+            await interaction.edit_original_response(embed=embed_bj, view=view)
 
         # Initial Deal
         for second_step in [0,1]:
@@ -340,7 +341,7 @@ async def self(interaction: discord.Interaction, bet: int):
             dealer_hand_str += "```"
 
         embed_bj = discord.Embed(
-            title = "Blackjack",
+            title = f"{main_player.player}'s ${bet} Blackjack game",
             colour = discord.Colour.green()
         )
         embed_bj.add_field(
