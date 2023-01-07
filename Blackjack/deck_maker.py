@@ -1,6 +1,5 @@
 import secrets
 
-
 def deck_maker(number_of_decks=1, shuffled=True): # Add option for jokers
     # Normal casinos will play with 1-8 52 card decks | Since we are online, we should have max to prevent card counting
     suits = ['spade', 'heart', 'diamond', "club"]
